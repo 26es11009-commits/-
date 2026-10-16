@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>체호의 리듬게임</title>
+  <style>
+    body {
+      background-color: #1a1a1a;
+      color: white;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      margin: 0;
+      padding: 10px;
+    }
+    #game-container {
+      position: relative;
+      width: 360px;
+      height: 600px;
+      background: #2a2a3a;
+      margin: 0 auto;
+      border: 4px solid #fff;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+    /* 노트 라인 */
+    .lane {
+      position: absolute;
+      top: 0;
+      width: 90px;
+      height: 100%;
+      border-right: 1px dashed #555;
+    }
+    .lane:last-child { border-right: none; }
+    /* 판정 선 */
+    #judgement-line {
+      position: absolute;
+      bottom: 80px;
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 215, 0, 0.7);
+    }
+    /* 리듬 노트 */
+    .note {
+      position: absolute;
+      width: 80px;
+      height: 25px;
+      background: #00e5ff;
+      border-radius: 6px;
+      left: 5px;
+      box-shadow: 0 0 8px #00e5ff;
+    }
+    /* 캐릭터 스타일링 */
+    #character-area {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      height: 70px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+    .char-box {
+      font-size: 13px;
+      padding: 6px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.6);
+    }
+    /* 체호 (주인공) */
+    #cheho {
+      border: 2px solid #4caf50;
+      color: #a5d6a7;
+    }
+    /* 민수 (라이벌) */
+    #minsu {
+      border: 2px solid #f44336;
+      color: #ef9a9a;
+      transition: transform 0.1s;
+    }
+    .punch {
+      transform: scale(1.4) translateX(-20px);
+      background: red !important;
+      color: white !important;
+    }
+    #score-board {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    #effect-text {
+      position: absolute;
+      top: 40%;
+      width: 100%;
+      font-size: 28px;
+      font-weight: bold;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>👓 체호의 노트를 맞춰라!</h1>
+  <div id="score-board">점수: <span id="score">0</span></div>
+
+  <div id="game-container">
+    <!-- 4개 레인 (A, S, D, F / 모바일 터치 대응) -->
+    <div class="lane" style="left: 0px;" onclick="pressKey(0)">A</div>
+    <div class="lane" style="left: 90px;" onclick="pressKey(1)">S</div>
+    <div class="lane" style="left: 180px;" onclick="pressKey(2)">D</div>
+    <div class="lane" style="left: 270px;" onclick="pressKey(3)">F</div>
+
+    <div id="judgement-line"></div>
+    <div id="effect-text"></div>
+
+    <!-- 캐릭터 영역 -->
+    <div id="character-area">
+      <div id="cheho" class="char-box">
+        <strong>박체호</strong><br>👓 (땡글한 눈)
+      </div>
+      <div id="minsu" class="char-box">
+        <strong>민수</strong><br>😑 (바가지머리)
+      </div>
+    </div>
+  </div>
+
+  <p>키보드 <strong>A, S, D, F</strong> 키를 누르거나 화면의 라인을 터치하세요!</p>
+
+  <script>
+    const container = document.getElementById('game-container');
+    const scoreEl = document.getElementById('score');
+    const effectText = document.getElementById('effect-text');
+    const minsuEl = document.getElementById('minsu');
+    
+    let score = 0;
+    const lanes = [5, 95, 185, 275];
+    const keyMap = { 'a': 0, 'A': 0, 's': 1, 'S': 1, 'd': 2, 'D': 2, 'f': 3, 'F': 3 };
+    const notes = [];
+
+    // 노트 생성기
+    function createNote() {
+      const laneIndex = Math.floor(Math.random() * 4);
+      const note = document.createElement('div');
+      note.className = 'note';
+      note.style.left = lanes[laneIndex] + 'px';
+      note.style.top = '0px';
+      note.dataset.lane = laneIndex;
+      
+      container.appendChild(note);
+      notes.push({ element: note, lane: laneIndex, top: 0 });
+    }
+
+    // 게임 루프 (노트 이동 및 판정)
+    function updateGame() {
+      for (let i = notes.length - 1; i >= 0; i--) {
+        let n = notes[i];
+        n.top += 4; // 노트 내려오는 속도
+        n.element.style.top = n.top + 'px';
+
+        // 판정선을 지나쳐 놓쳤을 때 (MISS)
+        if (n.top > 520) {
+          showEffect('MISS! 💥', '#ff5252');
+          triggerMinsuAttack(); // 민수 타격 연출
+          n.element.remove();
+          notes.splice(i, 1);
+        }
+      }
+    }
+
+    // 민수 때리기 효과
+    function triggerMinsuAttack() {
+      minsuEl.classList.add('punch');
+      minsuEl.innerHTML = "<strong>민수</strong><br>👊 팍!!";
+      
+      setTimeout(() => {
+        minsuEl.classList.remove('punch');
+        minsuEl.innerHTML = "<strong>민수</strong><br>😑 (바가지머리)";
+      }, 300);
+    }
+
+    // 키 입력 처리
+    function pressKey(laneIndex) {
+      let hit = false;
+      for (let i = 0; i < notes.length; i++) {
+        let n = notes[i];
+        if (n.lane === laneIndex && n.top >= 440 && n.top <= 520) {
+          showEffect('PERFECT! ✨', '#00e676');
+          score += 100;
+          scoreEl.innerText = score;
+          n.element.remove();
+          notes.splice(i, 1);
+          hit = true;
+          break;
+        }
+      }
+      if (!hit) {
+        // 잘 못 눌렀을 때도 MISS 처리
+        showEffect('MISS! 💥', '#ff5252');
+        triggerMinsuAttack();
+      }
+    }
+
+    // 효과 텍스트 출력
+    function showEffect(text, color) {
+      effectText.innerText = text;
+      effectText.style.color = color;
+      setTimeout(() => { effectText.innerText = ''; }, 400);
+    }
+
+    // 이벤트 리스너
+    window.addEventListener('keydown', (e) => {
+      if (keyMap[e.key] !== undefined) {
+        pressKey(keyMap[e.key]);
+      }
+    });
+
+    // 게임 시작
+    setInterval(createNote, 1200); // 1.2초마다 노트 생성
+    setInterval(updateGame, 1000 / 60); // 60FPS
+  </script>
+</body>
+</html>
